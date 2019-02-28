@@ -3,24 +3,39 @@ import dateutil.parser
 from functools import partial
 import json
 import logging
+import threading
+import time
 
 import pika
 import psycopg2
 
 
-def select():
-    cursor.execute(
-        """
-    select message, topic
-      from messages
-     where now() > produce_at
-     limit 10;
-    """
-    )
-    yield from cursor.fetchall()
+def producer(pgconn, amqp_channel, timeout=2):
+    """Push due messages to the delayed queue."""
+    while True:
+        with pgconn.cursor() as curs:
+            curs.execute(
+                """
+            select id, message, topic
+              from messages
+             where now() > produce_at
+             limit 10;
+            """
+            )
+            for id, message, topic in curs.fetchall():
+                try:
+                    amqp_channel.basic_publish(
+                        exchange="moq_delayed", routing_key=topic, body=message
+                    )
+                except pika.exceptions.AMQPError as e:
+                    logging.error("Failed to publish", exc_info=True)
+                else:
+                    curs.execute("delete from messages where id = %s;", (id,))
+        pgconn.commit()
+        time.sleep(timeout)
 
 
-def worker(conn, channel, method, properties, body):
+def consumer(conn, channel, method, properties, body):
     """Insert the rabbitmq message in the database."""
     logging.info(" [%s] %r", method.routing_key, body)
 
@@ -75,20 +90,27 @@ def main():
         password="delay_agent",
         host="127.0.0.1",
     )
-    channel = mqconn.channel()
 
-    channel.exchange_declare(exchange="moq", exchange_type="topic")
-    result = channel.queue_declare(exclusive=True)
-    queue_name = result.method.queue
-    channel.queue_bind(exchange="moq", queue=queue_name, routing_key="#")
+    consumer_channel = mqconn.channel()
+    consumer_channel.exchange_declare(exchange="moq", exchange_type="topic")
+    queue_name = consumer_channel.queue_declare(exclusive=True).method.queue
+    consumer_channel.queue_bind(exchange="moq", queue=queue_name, routing_key="#")
+
+    producer_channel = mqconn.channel()
+    producer_channel.exchange_declare(exchange="moq_delayed", exchange_type="topic")
+    t = threading.Thread(target=producer, args=(pgconn, producer_channel))
+    t.daemon = True
+    t.start()
 
     logging.info(" [*] Waiting for messages. To exit press CTRL+C")
-    channel.basic_consume(partial(worker, pgconn), queue=queue_name, no_ack=False)
+    consumer_channel.basic_consume(
+        partial(consumer, pgconn), queue=queue_name, no_ack=False
+    )
 
     try:
-        channel.start_consuming()
+        consumer_channel.start_consuming()
     except KeyboardInterrupt:
-        channel.stop_consuming()
+        consumer_channel.stop_consuming()
     finally:
         mqconn.close()
         pgconn.close()
