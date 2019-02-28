@@ -5,6 +5,8 @@ verify_ssl = true
 
 [dev-packages]
 black = "*"
+pytest = "*"
+pytest-cov = "*"
 
 [packages]
 psycopg2 = "*"
