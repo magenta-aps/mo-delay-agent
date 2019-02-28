@@ -41,7 +41,7 @@ def consumer(conn, channel, method, properties, body):
 
     try:
         message = json.loads(body)
-    except json.JsonDecodeError:
+    except json.JSONDecodeError:
         logging.error("Failed to decode body: %s", body)
         # we still acknowledge, because we do not want this message ever again
         channel.basic_ack(delivery_tag=method.delivery_tag)
