@@ -3,5 +3,5 @@ create table messages(
     id         serial primary key,
     message    text not null,
     topic      text not null,
-    produce_at timestamp not null
+    produce_at timestamptz not null
 );
