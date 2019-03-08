@@ -1,10 +1,12 @@
 from contextlib import contextmanager
 import datetime
 import dateutil.parser
+import json
 import logging
 import pika
 import random
 import threading
+import uuid
 
 import delay_agent
 
@@ -14,7 +16,7 @@ logging.getLogger("delay_agent.py").addHandler(logging.NullHandler())
 logging.getLogger("").addHandler(logging.NullHandler())
 # for the big boy tests, the delay agent is running
 # (just like postgres and rabbitmq)
-t_main = threading.Thread(target=delay_agent.main)
+t_main = threading.Thread(target=delay_agent.main, kwargs={"pgport": 5433})
 t_main.daemon = True
 t_main.start()
 
@@ -92,11 +94,16 @@ def test_message_order():
     ):
         if (method, properties, body) == (None, None, None):
             # no new messages, timeout
-            assert messages_received == MESSAGES, "Too few messages received"
+            assert messages_received == MESSAGES, (
+                "Too few messages received, %s" % messages_received
+            )
             break
         msg = json.loads(body)
         this_time = dateutil.parser.isoparse(msg["time"])
-        assert prev_time < this_time, "Messages received in wrong order"
+        assert prev_time <= this_time, (
+            "Messages received in wrong order after processing %s messages"
+            % messages_received
+        )
         prev_time = this_time
         messages_received += 1
 
