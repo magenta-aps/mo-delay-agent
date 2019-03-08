@@ -76,7 +76,7 @@ def consumer(conn, channel, method, properties, body):
     channel.basic_ack(delivery_tag=method.delivery_tag)
 
 
-def main():
+def main(*, pgport=5432):
     logging.basicConfig(
         level=logging.DEBUG,
         format="%(asctime)s %(name)-12s %(levelname)-8s %(message)s",
@@ -90,6 +90,7 @@ def main():
         user="delay_agent",
         password="delay_agent",
         host="127.0.0.1",
+        port=pgport,
     )
 
     consumer_channel = mqconn.channel()
