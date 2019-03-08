@@ -46,7 +46,7 @@ class Mock:
 
 
 def string_equal_ignore_whitespace(s1, s2):
-    return re.sub(r'\s', '', s1) == re.sub(r'\s', '', s2)
+    return re.sub(r"\s", "", s1) == re.sub(r"\s", "", s2)
 
 
 def test_invalid_json():
@@ -89,7 +89,6 @@ def test_valid_message():
     assert channel.basic_ack.kwargs["delivery_tag"] == method.delivery_tag
     sql = conn.cursor.context_manager.execute.args[0]
     assert string_equal_ignore_whitespace(
-        sql,
-        "insert into messages (message, topic, produce_at) values (%s, %s, %s);"
+        sql, "insert into messages (message, topic, produce_at) values (%s, %s, %s);"
     )
     assert conn.commit.args is not None
