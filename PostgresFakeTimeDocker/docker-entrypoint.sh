@@ -1,9 +1,6 @@
 #!/usr/bin/env bash
 set -Eeo pipefail
 
-export LD_PRELOAD="/usr/local/lib/faketime/libfaketime.so.1"
-export FAKETIME="+3y"
-
 # TODO swap to -Eeuo pipefail above (after handling all potentially-unset variables)
 
 # usage: file_env VAR [DEFAULT]
@@ -177,4 +174,6 @@ if [ "$1" = 'postgres' ]; then
 	fi
 fi
 
-exec "$@"
+# increment by three, but postgres amplies everything by 4.
+# im guessing it does 4 calls to getsystemclock for some reason...
+exec faketime -f "+0y i0.75s" "$@"
