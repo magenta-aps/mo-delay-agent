@@ -5,3 +5,6 @@ create table messages(
     topic      text not null,
     produce_at timestamptz not null
 );
+
+-- presumably a lot of messages will accumulate
+create index on messages (produce_at);
