@@ -2,7 +2,10 @@ version: "3"
 
 services:
     db:
-        image: postgres:9.6
+        build: ./PostgresFakeTimeDocker/
+        image: db
+        hostname: db
+        container_name: "db"
         ports:
             - "5432:5432"
         environment:
