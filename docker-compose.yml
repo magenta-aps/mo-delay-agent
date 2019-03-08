@@ -2,12 +2,19 @@ version: "3"
 
 services:
     db:
-        build: ./PostgresFakeTimeDocker/
-        image: db
-        hostname: db
-        container_name: "db"
+        image: "postgres:9.6"
         ports:
             - "5432:5432"
+        environment:
+            - POSTGRES_DB=delay_agent
+            - POSTGRES_USER=delay_agent
+            - POSTGRES_PASSWORD=delay_agent
+        volumes:
+            - "./delay.sql:/docker-entrypoint-initdb.d/delay.sql"
+    test_order_db:
+        build: ./PostgresFakeTimeDocker/
+        ports:
+            - "5433:5432"
         environment:
             - POSTGRES_DB=delay_agent
             - POSTGRES_USER=delay_agent
