@@ -1,3 +1,10 @@
+"""
+This file implements a classic unit test for delay_agent.consumer.
+
+It does not require anything to run. PostgreSQL and RabbitMQ are
+mocked.
+"""
+
 import datetime
 import json
 import re
