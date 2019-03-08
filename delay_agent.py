@@ -16,10 +16,11 @@ def producer(pgconn, amqp_channel, timeout=2):
         with pgconn.cursor() as curs:
             curs.execute(
                 """
-            select id, message, topic
-              from messages
-             where now() > produce_at
-             limit 10;
+              select id, message, topic
+                from messages
+               where now() > produce_at
+            order by produce_at asc
+               limit 10;
             """
             )
             for id, message, topic in curs.fetchall():
