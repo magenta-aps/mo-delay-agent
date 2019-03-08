@@ -82,7 +82,7 @@ def test_valid_message():
     channel = Mock()
     topic = "valid_message"
     method = Mock("routing_key", delivery_tag=topic)
-    now = datetime.datetime.now()
+    now = datetime.datetime.utcnow()
     future = datetime.datetime(now.year + 1, now.month, now.day)
     message = {"uuid": str(uuid.uuid4()), "time": str(future)}
     delay_agent.consumer(conn, channel, method, None, json.dumps(message))

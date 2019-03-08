@@ -56,7 +56,7 @@ def consumer(conn, channel, method, properties, body):
         channel.basic_ack(delivery_tag=method.delivery_tag)
         return
 
-    if time > datetime.datetime.now():
+    if time > datetime.datetime.utcnow():
         try:
             with conn.cursor() as curs:
                 curs.execute(
