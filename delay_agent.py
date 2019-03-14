@@ -10,8 +10,12 @@ import pika
 import psycopg2
 
 
-def producer(pgconn, amqp_channel, timeout=2):
+def producer(pgconn, timeout=2):
     """Push due messages to the delayed queue."""
+    mqconn = pika.BlockingConnection(pika.ConnectionParameters(host="localhost"))
+    channel = mqconn.channel()
+    channel.exchange_declare(exchange="moq_delayed", exchange_type="topic")
+
     while True:
         with pgconn.cursor() as curs:
             curs.execute(
@@ -32,7 +36,7 @@ def producer(pgconn, amqp_channel, timeout=2):
             )
             for id, message, topic in curs.fetchall():
                 try:
-                    amqp_channel.basic_publish(
+                    channel.basic_publish(
                         exchange="moq_delayed", routing_key=topic, body=message
                     )
                 except pika.exceptions.AMQPError as e:
@@ -116,9 +120,7 @@ def main(*, pgport=5432):
     queue_name = consumer_channel.queue_declare(exclusive=True).method.queue
     consumer_channel.queue_bind(exchange="moq", queue=queue_name, routing_key="#")
 
-    producer_channel = mqconn.channel()
-    producer_channel.exchange_declare(exchange="moq_delayed", exchange_type="topic")
-    t = threading.Thread(target=producer, args=(pgconn, producer_channel))
+    t = threading.Thread(target=producer, args=(pgconn,))
     t.daemon = True
     t.start()
 
