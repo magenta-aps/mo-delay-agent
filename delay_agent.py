@@ -19,22 +19,7 @@ def producer(pgconn, timeout=2):
     while True:
         timeout_ = timeout
         with pgconn.cursor() as curs:
-            curs.execute(
-                """
-              select id, message, topic
-                from messages
-               where now() > produce_at
-                  -- Do not rely on messages being ordered, but know that we
-                  -- produced the "most due" we knew of at the time. Also
-                  -- remember that rabbitmq is nondetermistic, so the queue
-                  -- may not have them in ascending order, even if the messages
-                  -- were published so.
-            order by produce_at asc
-                  -- We have to limit, so the application can run with (low)
-                  -- memory allocated without crashing.
-               limit 100;
-            """
-            )
+            curs.callproc("get_due_messages")
             for id, message, topic in curs.fetchall():
                 timeout_ = 0
                 try:
