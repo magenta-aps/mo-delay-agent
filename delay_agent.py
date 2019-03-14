@@ -32,7 +32,7 @@ def producer(pgconn, timeout=2):
             order by produce_at asc
                   -- We have to limit, so the application can run with (low)
                   -- memory allocated without crashing.
-               limit 10;
+               limit 100;
             """
             )
             for id, message, topic in curs.fetchall():
