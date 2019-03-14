@@ -17,6 +17,7 @@ def producer(pgconn, timeout=2):
     channel.exchange_declare(exchange="moq_delayed", exchange_type="topic")
 
     while True:
+        timeout_ = timeout
         with pgconn.cursor() as curs:
             curs.execute(
                 """
@@ -35,6 +36,7 @@ def producer(pgconn, timeout=2):
             """
             )
             for id, message, topic in curs.fetchall():
+                timeout_ = 0
                 try:
                     channel.basic_publish(
                         exchange="moq_delayed", routing_key=topic, body=message
@@ -44,7 +46,7 @@ def producer(pgconn, timeout=2):
                 else:
                     curs.execute("delete from messages where id = %s;", (id,))
         pgconn.commit()
-        time.sleep(timeout)
+        time.sleep(timeout_)
 
 
 def consumer(conn, channel, method, properties, body):
