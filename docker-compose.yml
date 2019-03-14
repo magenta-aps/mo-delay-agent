@@ -21,6 +21,16 @@ services:
             - POSTGRES_PASSWORD=delay_agent
         volumes:
             - "./delay.sql:/docker-entrypoint-initdb.d/delay.sql"
+    test_end_to_end_db:
+        build: ./PostgresFakeTimeDocker/
+        ports:
+            - "5434:5432"
+        environment:
+            - POSTGRES_DB=delay_agent
+            - POSTGRES_USER=delay_agent
+            - POSTGRES_PASSWORD=delay_agent
+        volumes:
+            - "./delay.sql:/docker-entrypoint-initdb.d/delay.sql"
     amqp:
         image: rabbitmq:3.5
         ports:
