@@ -92,3 +92,27 @@ def test_valid_message():
         sql, "insert into messages (message, topic, produce_at) values (%s, %s, %s);"
     )
     assert conn.commit.args is not None
+
+
+def test_bad_type_str():
+    channel = Mock()
+    method = Mock("routing_key", delivery_tag="bad_type_str")
+    bad_json = "asd"
+    delay_agent.consumer(None, channel, method, None, json.dumps(bad_json))
+    assert channel.basic_ack.kwargs["delivery_tag"] == method.delivery_tag
+
+
+def test_bad_type_int():
+    channel = Mock()
+    method = Mock("routing_key", delivery_tag="bad_type_int")
+    bad_json = 1337
+    delay_agent.consumer(None, channel, method, None, json.dumps(bad_json))
+    assert channel.basic_ack.kwargs["delivery_tag"] == method.delivery_tag
+
+
+def test_bad_type_list():
+    channel = Mock()
+    method = Mock("routing_key", delivery_tag="bad_type_list")
+    bad_json = ["time", "uuid"]
+    delay_agent.consumer(None, channel, method, None, json.dumps(bad_json))
+    assert channel.basic_ack.kwargs["delivery_tag"] == method.delivery_tag

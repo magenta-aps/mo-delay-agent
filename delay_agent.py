@@ -56,6 +56,17 @@ def consumer(conn, channel, method, properties, body):
         return
 
     try:
+        message["time"]
+        message["uuid"]
+    except (ValueError, TypeError, KeyError, IndexError):
+        # loading json can give us an int, list, string... Also checks that
+        # ``message`` is not missing keys.
+        logging.error("Invalid message: %s", message)
+        # we still acknowledge, because we do not want this message ever again
+        channel.basic_ack(delivery_tag=method.delivery_tag)
+        return
+
+    try:
         time = dateutil.parser.isoparse(message["time"])
     except ValueError:
         logging.error("Failed to parse time: %s", message["time"])
