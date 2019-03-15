@@ -8,6 +8,7 @@ create table messages(
 
 
 -- presumably a lot of messages will accumulate
+-- (remove this index to speed up inserting, at the cost of slower searches).
 create index on messages (produce_at);
 
 
