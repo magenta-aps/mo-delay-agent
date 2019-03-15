@@ -95,7 +95,7 @@ def consumer(conn, channel, method, properties, body):
                     (json.dumps(message), method.routing_key, time),
                 )
             conn.commit()
-        except psycopg2.Error as e:
+        except psycopg2.Error:
             conn.rollback()
             logging.error(message, exc_info=True)
             return  # no ack
