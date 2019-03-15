@@ -63,7 +63,6 @@ def producer():
         time.sleep(3 / len(messages))
 
     channel.close()
-    connection.close()
 
 
 t = threading.Thread(target=producer)
