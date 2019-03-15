@@ -143,11 +143,12 @@ def main(*, pgport=5432, mqport=5672):
         host="127.0.0.1",
         port=pgport,
     )
-    channel = get_new_consumer_channel(pgconn, mqport)
 
     t = threading.Thread(target=producer, args=(pgconn, mqport))
     t.daemon = True
     t.start()
+
+    channel = get_new_consumer_channel(pgconn, mqport)
 
     logging.info(" [*] Waiting for messages. To exit press CTRL+C")
 
