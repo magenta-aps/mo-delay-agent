@@ -32,8 +32,12 @@ def get_new_producer_channel(port):
 
 def producer(pgconn, mqport, timeout=2):
     """Push due messages to the delayed queue."""
+    # this can hang indefinitely, but that is fine as the producer is not
+    # useful without it anyway.
     channel = get_new_producer_channel(mqport)
     while True:
+        # we user this inner ``timeout_`` because we do not want to timeout in
+        # the iteration after a successful call to ``get_due_messages``.
         timeout_ = timeout
         with pgconn.cursor() as curs:
             curs.callproc("get_due_messages")
