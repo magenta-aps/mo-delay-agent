@@ -13,10 +13,10 @@ import psycopg2
 def get_new_producer_channel(port):
     """Return a channel for publishing messages to the delayed queue."""
     while True:
+        logging.info(
+            "Trying to make a new producer connection to RabbitMQ on port %s", port
+        )
         try:
-            logging.info(
-                "Trying to make a new producer connection to RabbitMQ on port %s", port
-            )
             conn = pika.BlockingConnection(
                 pika.ConnectionParameters(host="localhost", port=port)
             )
@@ -30,30 +30,47 @@ def get_new_producer_channel(port):
             return channel
 
 
-def producer(pgconn, mqport, timeout=2):
+def producer(get_pg_conn, mqport, timeout=2):
     """Push due messages to the delayed queue."""
+    def pg_reconnect():
+        while True:
+            logging.info("Trying to connect to PostgreSQL")
+            try:
+                conn = get_pg_conn()
+            except psycopg2.Error:
+                logging.error("Failed to connect to PostgreSQL")
+                time.sleep(2)
+                continue
+            logging.info("Successfully connected to PostgreSQL")
+            return conn
     # this can hang indefinitely, but that is fine as the producer is not
     # useful without it anyway.
     channel = get_new_producer_channel(mqport)
+    pgconn = pg_reconnect()
     while True:
         # we user this inner ``timeout_`` because we do not want to timeout in
         # the iteration after a successful call to ``get_due_messages``.
         timeout_ = timeout
-        with pgconn.cursor() as curs:
-            curs.callproc("get_due_messages")
-            for id, message, topic in curs.fetchall():
-                timeout_ = 0
-                try:
-                    channel.basic_publish(
-                        exchange="moq_delayed", routing_key=topic, body=message
-                    )
-                except pika.exceptions.AMQPError as e:
-                    logging.error("Failed to publish", exc_info=True)
-                    channel = get_new_producer_channel()
-                else:
-                    curs.execute("delete from messages where id = %s;", (id,))
-        pgconn.commit()
-        time.sleep(timeout_)
+        try:
+            with pgconn.cursor() as curs:
+                curs.callproc("get_due_messages")
+                for id, message, topic in curs.fetchall():
+                    timeout_ = 0
+                    try:
+                        channel.basic_publish(
+                            exchange="moq_delayed", routing_key=topic, body=message
+                        )
+                    except pika.exceptions.AMQPError as e:
+                        logging.error("Failed to publish", exc_info=True)
+                        channel = get_new_producer_channel()
+                    else:
+                        curs.execute("delete from messages where id = %s;", (id,))
+            pgconn.commit()
+        except psycopg2.Error:
+            logging.error("PostgreSQL error", exc_info=True)
+            pgconn = pg_reconnect()
+        finally:
+            time.sleep(timeout_)
 
 
 def consumer(conn, channel, method, properties, body):
@@ -107,13 +124,23 @@ def consumer(conn, channel, method, properties, body):
     channel.basic_ack(delivery_tag=method.delivery_tag)
 
 
-def get_new_consumer_channel(pgconn, port):
+def get_new_consumer_channel(get_pg_conn, port):
     """Return a channel for consuming messages from MO's queue."""
     while True:
+        logging.info("Trying to connect to PostgreSQL")
         try:
-            logging.info(
-                "Trying to make a new consumer connection to RabbitMQ on port %s", port
-            )
+            pgconn = get_pg_conn()
+        except psycopg2.Error:
+            logging.error("Failed to connect to PostgreSQL")
+            time.sleep(2)
+            continue
+        else:
+            logging.info("Successfully connected to PostgreSQL")
+
+        logging.info(
+            "Trying to make a new consumer connection to RabbitMQ on port %s", port
+        )
+        try:
             conn = pika.BlockingConnection(
                 pika.ConnectionParameters(host="localhost", port=port)
             )
@@ -140,19 +167,20 @@ def main(*, pgport=5432, mqport=5672):
     )
     logging.getLogger("pika").setLevel(logging.WARNING)
 
-    pgconn = psycopg2.connect(
-        database="delay_agent",
-        user="delay_agent",
-        password="delay_agent",
-        host="127.0.0.1",
-        port=pgport,
-    )
+    def get_pg_conn():
+        return psycopg2.connect(
+            database="delay_agent",
+            user="delay_agent",
+            password="delay_agent",
+            host="127.0.0.1",
+            port=pgport,
+        )
 
-    t = threading.Thread(target=producer, args=(pgconn, mqport))
+    t = threading.Thread(target=producer, args=(get_pg_conn, mqport))
     t.daemon = True
     t.start()
 
-    channel = get_new_consumer_channel(pgconn, mqport)
+    channel = get_new_consumer_channel(get_pg_conn, mqport)
 
     logging.info(" [*] Waiting for messages. To exit press CTRL+C")
 
@@ -161,13 +189,15 @@ def main(*, pgport=5432, mqport=5672):
             channel.start_consuming()
         except pika.exceptions.AMQPError:
             logging.error("AMQPError while consuming", exc_info=True)
-            channel = get_new_consumer_channel(pgconn, mqport)
+            channel = get_new_consumer_channel(get_pg_conn, mqport)
+        except psycopg2.Error:
+            logging.error("psycopg2.Error while consuming", exc_info=True)
+            channel = get_new_consumer_channel(get_pg_conn, mqport)
         except KeyboardInterrupt:
             channel.stop_consuming()
             break
 
     channel.close()
-    pgconn.close()
 
 
 if __name__ == "__main__":
