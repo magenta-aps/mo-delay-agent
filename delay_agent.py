@@ -3,6 +3,7 @@ import dateutil.parser
 from functools import partial
 import json
 import logging
+import os
 import threading
 import time
 
@@ -10,18 +11,29 @@ import pika
 import psycopg2
 
 
-def get_new_producer_channel(port):
+MQ_HOST = os.getenv("AMQP_HOST", "localhost")
+MQ_PORT = int(os.getenv("AMQP_PORT", "5672"))
+MQ_MO_EXCHANGE = os.getenv("AMQP_MO_EXCHANGE", "moq")
+MQ_DELAYED_EXCHANGE = os.getenv("AMQP_DELAYED_EXCHANGE", "delayed_moq")
+PG_HOST = os.getenv("POSTGRES_HOST", "localhost")
+PG_PORT = int(os.getenv("POSTGRES_PORT", "5432"))
+PG_DB = os.getenv("POSTGRES_DB", "delay_agent")
+PG_USER = os.getenv("POSTGRES_USER", "delay_agent")
+PG_PASSWORD = os.getenv("POSTGRES_PASSWORD", "delay_agent")
+
+
+def get_new_producer_channel():
     """Return a channel for publishing messages to the delayed queue."""
     while True:
         logging.info(
-            "Trying to make a new producer connection to RabbitMQ on port %s", port
+            "Trying to make a new producer connection to RabbitMQ on port %s", MQ_PORT
         )
         try:
             conn = pika.BlockingConnection(
-                pika.ConnectionParameters(host="localhost", port=port)
+                pika.ConnectionParameters(host=MQ_HOST, port=MQ_PORT)
             )
             channel = conn.channel()
-            channel.exchange_declare(exchange="moq_delayed", exchange_type="topic")
+            channel.exchange_declare(exchange=MQ_DELAYED_EXCHANGE, exchange_type="topic")
         except pika.exceptions.AMQPError:
             logging.error("Failed to connect to producer RabbitMQ", exc_info=True)
             time.sleep(4)
@@ -30,8 +42,9 @@ def get_new_producer_channel(port):
             return channel
 
 
-def producer(get_pg_conn, mqport, timeout=2):
+def producer(get_pg_conn, timeout=2):
     """Push due messages to the delayed queue."""
+
     def pg_reconnect():
         while True:
             logging.info("Trying to connect to PostgreSQL")
@@ -43,9 +56,10 @@ def producer(get_pg_conn, mqport, timeout=2):
                 continue
             logging.info("Successfully connected to PostgreSQL")
             return conn
+
     # this can hang indefinitely, but that is fine as the producer is not
     # useful without it anyway.
-    channel = get_new_producer_channel(mqport)
+    channel = get_new_producer_channel()
     pgconn = pg_reconnect()
     while True:
         # we user this inner ``timeout_`` because we do not want to timeout in
@@ -58,7 +72,7 @@ def producer(get_pg_conn, mqport, timeout=2):
                     timeout_ = 0
                     try:
                         channel.basic_publish(
-                            exchange="moq_delayed", routing_key=topic, body=message
+                            exchange=MQ_DELAYED_EXCHANGE, routing_key=topic, body=message
                         )
                     except pika.exceptions.AMQPError as e:
                         logging.error("Failed to publish", exc_info=True)
@@ -124,7 +138,7 @@ def consumer(conn, channel, method, properties, body):
     channel.basic_ack(delivery_tag=method.delivery_tag)
 
 
-def get_new_consumer_channel(get_pg_conn, port):
+def get_new_consumer_channel(get_pg_conn):
     """Return a channel for consuming messages from MO's queue."""
     while True:
         logging.info("Trying to connect to PostgreSQL")
@@ -139,16 +153,16 @@ def get_new_consumer_channel(get_pg_conn, port):
 
         while True:
             logging.info(
-                "Trying to make a new consumer connection to RabbitMQ on port %s", port
+                "Trying to make a new consumer connection to RabbitMQ on port %s", MQ_PORT
             )
             try:
                 conn = pika.BlockingConnection(
-                    pika.ConnectionParameters(host="localhost", port=port)
+                    pika.ConnectionParameters(host=MQ_HOST, port=MQ_PORT)
                 )
                 channel = conn.channel()
-                channel.exchange_declare(exchange="moq", exchange_type="topic")
+                channel.exchange_declare(exchange=MQ_MO_EXCHANGE, exchange_type="topic")
                 queue_name = channel.queue_declare(exclusive=True).method.queue
-                channel.queue_bind(exchange="moq", queue=queue_name, routing_key="#")
+                channel.queue_bind(exchange=MQ_MO_EXCHANGE, queue=queue_name, routing_key="#")
                 channel.basic_consume(
                     partial(consumer, pgconn), queue=queue_name, no_ack=False
                 )
@@ -160,7 +174,7 @@ def get_new_consumer_channel(get_pg_conn, port):
                 return channel
 
 
-def main(*, pgport=5432, mqport=5672):
+def main():
     logging.basicConfig(
         level=logging.DEBUG,
         format="%(asctime)s %(name)-12s %(levelname)-8s %(message)s",
@@ -170,18 +184,18 @@ def main(*, pgport=5432, mqport=5672):
 
     def get_pg_conn():
         return psycopg2.connect(
-            database="delay_agent",
-            user="delay_agent",
-            password="delay_agent",
-            host="127.0.0.1",
-            port=pgport,
+            host=PG_HOST,
+            port=PG_PORT,
+            database=PG_DB,
+            user=PG_USER,
+            password=PG_PASSWORD,
         )
 
-    t = threading.Thread(target=producer, args=(get_pg_conn, mqport))
+    t = threading.Thread(target=producer, args=(get_pg_conn,))
     t.daemon = True
     t.start()
 
-    channel = get_new_consumer_channel(get_pg_conn, mqport)
+    channel = get_new_consumer_channel(get_pg_conn)
 
     logging.info(" [*] Waiting for messages. To exit press CTRL+C")
 
@@ -190,10 +204,10 @@ def main(*, pgport=5432, mqport=5672):
             channel.start_consuming()
         except pika.exceptions.AMQPError:
             logging.error("AMQPError while consuming", exc_info=True)
-            channel = get_new_consumer_channel(get_pg_conn, mqport)
+            channel = get_new_consumer_channel(get_pg_conn)
         except psycopg2.Error:
             logging.error("psycopg2.Error while consuming", exc_info=True)
-            channel = get_new_consumer_channel(get_pg_conn, mqport)
+            channel = get_new_consumer_channel(get_pg_conn)
         except KeyboardInterrupt:
             channel.stop_consuming()
             break
