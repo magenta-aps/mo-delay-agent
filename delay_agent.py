@@ -24,7 +24,7 @@ def get_new_producer_channel(port):
             channel.exchange_declare(exchange="moq_delayed", exchange_type="topic")
         except pika.exceptions.AMQPError:
             logging.error("Failed to connect to producer RabbitMQ", exc_info=True)
-            time.sleep(0.5)
+            time.sleep(4)
         else:
             logging.info("Successfully connected to producer RabbitMQ")
             return channel
@@ -39,7 +39,7 @@ def producer(get_pg_conn, mqport, timeout=2):
                 conn = get_pg_conn()
             except psycopg2.Error:
                 logging.error("Failed to connect to PostgreSQL")
-                time.sleep(2)
+                time.sleep(4)
                 continue
             logging.info("Successfully connected to PostgreSQL")
             return conn
@@ -132,31 +132,32 @@ def get_new_consumer_channel(get_pg_conn, port):
             pgconn = get_pg_conn()
         except psycopg2.Error:
             logging.error("Failed to connect to PostgreSQL")
-            time.sleep(2)
+            time.sleep(4)
             continue
         else:
             logging.info("Successfully connected to PostgreSQL")
 
-        logging.info(
-            "Trying to make a new consumer connection to RabbitMQ on port %s", port
-        )
-        try:
-            conn = pika.BlockingConnection(
-                pika.ConnectionParameters(host="localhost", port=port)
+        while True:
+            logging.info(
+                "Trying to make a new consumer connection to RabbitMQ on port %s", port
             )
-            channel = conn.channel()
-            channel.exchange_declare(exchange="moq", exchange_type="topic")
-            queue_name = channel.queue_declare(exclusive=True).method.queue
-            channel.queue_bind(exchange="moq", queue=queue_name, routing_key="#")
-            channel.basic_consume(
-                partial(consumer, pgconn), queue=queue_name, no_ack=False
-            )
-        except pika.exceptions.AMQPError:
-            logging.error("Failed to connect to consumer RabbitMQ")
-            time.sleep(0.5)
-        else:
-            logging.info("Successfully connected to consumer RabbitMQ")
-            return channel
+            try:
+                conn = pika.BlockingConnection(
+                    pika.ConnectionParameters(host="localhost", port=port)
+                )
+                channel = conn.channel()
+                channel.exchange_declare(exchange="moq", exchange_type="topic")
+                queue_name = channel.queue_declare(exclusive=True).method.queue
+                channel.queue_bind(exchange="moq", queue=queue_name, routing_key="#")
+                channel.basic_consume(
+                    partial(consumer, pgconn), queue=queue_name, no_ack=False
+                )
+            except pika.exceptions.AMQPError:
+                logging.error("Failed to connect to consumer RabbitMQ")
+                time.sleep(4)
+            else:
+                logging.info("Successfully connected to consumer RabbitMQ")
+                return channel
 
 
 def main(*, pgport=5432, mqport=5672):
