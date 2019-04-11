@@ -1,0 +1,9 @@
+unit-test:
+    stage: test
+    image: python:3.7
+    tags:
+        - docker
+    script:
+        - pip install pipenv
+        - pipenv install --dev
+        - pipenv run pytest
