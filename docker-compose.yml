@@ -1,17 +1,26 @@
 version: "3"
 
 services:
-    db:
-        image: "postgres:9.6"
-        ports:
-            - "5432:5432"
+    delay-agent:
+        build: .
+        env_file:
+            - pg.env
+            - amqp.env
         environment:
-            - POSTGRES_DB=delay_agent
-            - POSTGRES_USER=delay_agent
-            - POSTGRES_PASSWORD=delay_agent
+            - AMQP_HOST=amqp
+            - POSTGRES_HOST=delay-db
+        depends_on:
+            - delay-db
+            - amqp
+
+    delay-db:
+        image: "postgres:9.6"
+        env_file:
+            - pg.env
         volumes:
             - "./delay.sql:/docker-entrypoint-initdb.d/delay.sql"
+
     amqp:
         image: rabbitmq:3.5
-        ports:
-            - "5672:5672"
+        env_file:
+            - amqp.env
