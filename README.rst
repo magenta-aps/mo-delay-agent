@@ -26,8 +26,6 @@ Developing
 to run these locally is with ``docker`` and ``docker-compose``::
 
     $ docker-compose up --build -d
-    $ pipenv install --dev
-    $ pipenv run python delay_agent.py
 
 
 Testing
