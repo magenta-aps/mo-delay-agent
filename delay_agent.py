@@ -11,6 +11,7 @@ from functools import partial
 import json
 import logging
 import os
+import random
 import threading
 import time
 
@@ -29,8 +30,19 @@ PG_USER = os.getenv("POSTGRES_USER", "delay_agent")
 PG_PASSWORD = os.getenv("POSTGRES_PASSWORD", "delay_agent")
 
 
+def new_backoff_gen():
+    """In case rabbitmq or postgres restarts or crashes, we do not want
+    all services to connect at the same time."""
+    yield random.randrange(0, 2)
+    yield random.randrange(0, 4)
+    yield random.randrange(0, 8)
+    while True:
+        yield random.randrange(0, 300)
+
+
 def get_new_producer_channel():
     """Return a channel for publishing messages to the delayed queue."""
+    backoff = new_backoff_gen()
     while True:
         logging.info(
             "Trying to make a new producer connection to RabbitMQ on port %s", MQ_PORT
@@ -43,7 +55,7 @@ def get_new_producer_channel():
             channel.exchange_declare(exchange=MQ_DELAYED_EXCHANGE, exchange_type="topic")
         except pika.exceptions.AMQPError:
             logging.error("Failed to connect to producer RabbitMQ", exc_info=True)
-            time.sleep(4)
+            time.sleep(next(backoff))
         else:
             logging.info("Successfully connected to producer RabbitMQ")
             return channel
@@ -53,13 +65,14 @@ def producer(get_pg_conn, timeout=2):
     """Push due messages to the delayed queue."""
 
     def pg_reconnect():
+        backoff = new_backoff_gen()
         while True:
             logging.info("Trying to connect to PostgreSQL")
             try:
                 conn = get_pg_conn()
             except psycopg2.Error:
                 logging.error("Failed to connect to PostgreSQL")
-                time.sleep(4)
+                time.sleep(next(backoff))
                 continue
             logging.info("Successfully connected to PostgreSQL")
             return conn
@@ -147,17 +160,19 @@ def consumer(conn, channel, method, properties, body):
 
 def get_new_consumer_channel(get_pg_conn):
     """Return a channel for consuming messages from MO's queue."""
+    backoff = new_backoff_gen()
     while True:
         logging.info("Trying to connect to PostgreSQL")
         try:
             pgconn = get_pg_conn()
         except psycopg2.Error:
             logging.error("Failed to connect to PostgreSQL")
-            time.sleep(4)
+            time.sleep(next(backoff))
             continue
         else:
             logging.info("Successfully connected to PostgreSQL")
 
+        backoff = new_backoff_gen()
         while True:
             logging.info(
                 "Trying to make a new consumer connection to RabbitMQ on port %s", MQ_PORT
@@ -175,7 +190,7 @@ def get_new_consumer_channel(get_pg_conn):
                 )
             except pika.exceptions.AMQPError:
                 logging.error("Failed to connect to consumer RabbitMQ")
-                time.sleep(4)
+                time.sleep(next(backoff))
             else:
                 logging.info("Successfully connected to consumer RabbitMQ")
                 return channel
