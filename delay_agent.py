@@ -199,7 +199,7 @@ def get_new_consumer_channel(get_pg_conn):
 def main():
     logging.basicConfig(
         level=logging.DEBUG,
-        format="%(asctime)s %(name)-12s %(levelname)-8s %(message)s",
+        format="%(asctime)s %(name)-12s %(threadName)-8s %(levelname)-8s %(message)s",
         datefmt="%m-%d %H:%M",
     )
     logging.getLogger("pika").setLevel(logging.WARNING)
@@ -213,7 +213,8 @@ def main():
             password=PG_PASSWORD,
         )
 
-    t = threading.Thread(target=producer, args=(get_pg_conn,))
+    threading.current_thread().name = "consumer"
+    t = threading.Thread(target=producer, name="producer", args=(get_pg_conn,))
     t.daemon = True
     t.start()
 
