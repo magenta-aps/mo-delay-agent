@@ -105,6 +105,7 @@ def producer(get_pg_conn, timeout=2):
                         curs.execute("delete from messages where id = %s;", (id,))
             pgconn.commit()
         except psycopg2.Error:
+            # rollback? perhaps if "delete from ..." fails?
             logging.error("PostgreSQL error", exc_info=True)
             pgconn = pg_reconnect()
         finally:
