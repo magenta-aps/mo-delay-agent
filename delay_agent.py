@@ -52,7 +52,9 @@ def get_new_producer_channel():
                 pika.ConnectionParameters(host=MQ_HOST, port=MQ_PORT)
             )
             channel = conn.channel()
-            channel.exchange_declare(exchange=MQ_DELAYED_EXCHANGE, exchange_type="topic")
+            channel.exchange_declare(
+                exchange=MQ_DELAYED_EXCHANGE, exchange_type="topic"
+            )
         except pika.exceptions.AMQPError:
             logging.error("Failed to connect to producer RabbitMQ", exc_info=True)
             time.sleep(next(backoff))
@@ -92,7 +94,9 @@ def producer(get_pg_conn, timeout=2):
                     timeout_ = 0
                     try:
                         channel.basic_publish(
-                            exchange=MQ_DELAYED_EXCHANGE, routing_key=topic, body=message
+                            exchange=MQ_DELAYED_EXCHANGE,
+                            routing_key=topic,
+                            body=message,
                         )
                     except pika.exceptions.AMQPError as e:
                         logging.error("Failed to publish", exc_info=True)
@@ -175,7 +179,8 @@ def get_new_consumer_channel(get_pg_conn):
         backoff = new_backoff_gen()
         while True:
             logging.info(
-                "Trying to make a new consumer connection to RabbitMQ on port %s", MQ_PORT
+                "Trying to make a new consumer connection to RabbitMQ on port %s",
+                MQ_PORT,
             )
             try:
                 conn = pika.BlockingConnection(
@@ -184,7 +189,9 @@ def get_new_consumer_channel(get_pg_conn):
                 channel = conn.channel()
                 channel.exchange_declare(exchange=MQ_MO_EXCHANGE, exchange_type="topic")
                 queue_name = channel.queue_declare(exclusive=True).method.queue
-                channel.queue_bind(exchange=MQ_MO_EXCHANGE, queue=queue_name, routing_key="#")
+                channel.queue_bind(
+                    exchange=MQ_MO_EXCHANGE, queue=queue_name, routing_key="#"
+                )
                 channel.basic_consume(
                     partial(consumer, pgconn), queue=queue_name, no_ack=False
                 )
