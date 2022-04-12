@@ -1,9 +1,9 @@
 unit-test:
     stage: test
-    image: python:3.7
+    image: python:3.10
     tags:
         - docker
     script:
-        - pip install pipenv
-        - pipenv install --dev
-        - pipenv run pytest
+        - pip install poetry
+        - poetry install
+        - poetry run pytest
