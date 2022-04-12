@@ -19,7 +19,7 @@ import uuid
 
 import pika
 
-import delay_agent
+from mo_delay_agent import delay_agent
 
 
 class Mock:
