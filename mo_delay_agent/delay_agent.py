@@ -4,17 +4,16 @@
 # This Source Code Form is subject to the terms of the Mozilla Public
 # License, v. 2.0. If a copy of the MPL was not distributed with this
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
-
 import datetime
-import dateutil.parser
-from functools import partial
 import json
 import logging
 import os
 import random
 import threading
 import time
+from functools import partial
 
+import dateutil.parser
 import pika
 import psycopg2
 
@@ -45,18 +44,20 @@ def get_new_producer_channel():
     backoff = new_backoff_gen()
     while True:
         logging.info(
-            "Trying to make a new producer connection to RabbitMQ on port %s", MQ_PORT
-        )
+            "Make a new producer connection to RabbitMQ on port %s", MQ_PORT
+        )  # noqa
         try:
             conn = pika.BlockingConnection(
-                pika.ConnectionParameters(host=MQ_HOST, port=MQ_PORT)
+                pika.ConnectionParameters(host=MQ_HOST, port=MQ_PORT)  # noqa
             )
             channel = conn.channel()
             channel.exchange_declare(
                 exchange=MQ_DELAYED_EXCHANGE, exchange_type="topic"
             )
         except pika.exceptions.AMQPError:
-            logging.error("Failed to connect to producer RabbitMQ", exc_info=True)
+            logging.error(
+                "Failed to connect to producer RabbitMQ", exc_info=True
+            )  # noqa
             time.sleep(next(backoff))
         else:
             logging.info("Successfully connected to producer RabbitMQ")
@@ -98,11 +99,13 @@ def producer(get_pg_conn, timeout=2):
                             routing_key=topic,
                             body=message,
                         )
-                    except pika.exceptions.AMQPError as e:
+                    except pika.exceptions.AMQPError:
                         logging.error("Failed to publish", exc_info=True)
                         channel = get_new_producer_channel()
                     else:
-                        curs.execute("delete from messages where id = %s;", (id,))
+                        curs.execute(
+                            "delete from messages where id = %s;", (id,)
+                        )  # noqa
             pgconn.commit()
         except psycopg2.Error:
             # rollback? perhaps if "delete from ..." fails?
@@ -180,7 +183,7 @@ def get_new_consumer_channel(get_pg_conn):
         backoff = new_backoff_gen()
         while True:
             logging.info(
-                "Trying to make a new consumer connection to RabbitMQ on port %s",
+                "Trying to make a new consumer connection to RabbitMQ on port %s",  # noqa
                 MQ_PORT,
             )
             try:
@@ -188,7 +191,9 @@ def get_new_consumer_channel(get_pg_conn):
                     pika.ConnectionParameters(host=MQ_HOST, port=MQ_PORT)
                 )
                 channel = conn.channel()
-                channel.exchange_declare(exchange=MQ_MO_EXCHANGE, exchange_type="topic")
+                channel.exchange_declare(
+                    exchange=MQ_MO_EXCHANGE, exchange_type="topic"
+                )  # noqa
                 queue_name = channel.queue_declare(exclusive=True).method.queue
                 channel.queue_bind(
                     exchange=MQ_MO_EXCHANGE, queue=queue_name, routing_key="#"
@@ -207,7 +212,7 @@ def get_new_consumer_channel(get_pg_conn):
 def main():
     logging.basicConfig(
         level=logging.DEBUG,
-        format="%(asctime)s %(name)-12s %(threadName)-8s %(levelname)-8s %(message)s",
+        format="%(asctime)s %(name)-12s %(threadName)-8s %(levelname)-8s %(message)s",  # noqa
         datefmt="%m-%d %H:%M",
     )
     logging.getLogger("pika").setLevel(logging.WARNING)
