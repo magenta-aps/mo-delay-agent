@@ -66,7 +66,7 @@ def test_invalid_time():
         "uuid": str(uuid.uuid4()),
         "time": "2019-03-28iuuuu13:41:48.036681",
     }
-    delay_agent.consumer(None, channel, method, None, json.dumps(bad_time_json))  # noqa
+    delay_agent.consumer(None, channel, method, None, json.dumps(bad_time_json))
     assert channel.basic_ack.kwargs["delivery_tag"] == method.delivery_tag
 
 
@@ -94,7 +94,7 @@ def test_valid_message():
 
     assert string_equal_ignore_whitespace(
         sql,
-        "insert into messages (message, topic, produce_at) values (%s, %s, %s);",  # noqa
+        "insert into messages (message, topic, produce_at) values (%s, %s, %s);",
     )
     assert conn.commit.args is not None
 
