@@ -3,7 +3,7 @@
 # to installing from source which is very time consuming. See
 # https://github.com/pypa/manylinux/issues/37 and
 # https://github.com/docker-library/docs/issues/904
-FROM python:3.7
+FROM python:3.10
 
 # Force the stdout and stderr streams from python to be unbuffered. See
 # https://docs.python.org/3/using/cmdline.html#cmdoption-u
@@ -11,13 +11,12 @@ ENV PYTHONUNBUFFERED 1
 
 WORKDIR /code/
 
-RUN pip3 install pipenv
+RUN pip install poetry
 
-COPY Pipfile .
-COPY Pipfile.lock .
+COPY pyproject.toml poetry.lock ./
 
-RUN pipenv install
+RUN poetry install
 
 COPY delay_agent.py .
 
-CMD ["pipenv", "run", "python", "delay_agent.py"]
+CMD ["poetry", "run", "python", "delay_agent.py"]
