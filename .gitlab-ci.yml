@@ -5,6 +5,7 @@ stages:
   - lint
   - build
   - test
+  - release
 
 
 include:
