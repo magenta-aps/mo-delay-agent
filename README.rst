@@ -3,20 +3,20 @@ mo-delay-agent
 ==============
 
 ``mo-delay-agent`` is a component in the MO eco system. MO_ sends messages to
-an AMQP_ broker everytime an object is created, changed or deleted with a
+an AMQP_ broker every time an object is created, changed or deleted with a
 timestamp of when said event is scheduled. This agent saves all those messages
-and sends them to a new queue when they are due. This makes it very practical
-for writting integrations for MO_. Please refer to the MO_ docs_ for more
-information about the messages.
+and sends them to a new queue when they are due. This makes it possible to
+write integrations for MO_, that react to changes when they are scheduled to occur.
+Please refer to the MO_ docs_ for more information about the messages.
 
 
 Architecture
 ------------
 
 ``mo-delay-agent`` consists of the ``consumer`` and the ``producer``.
-``consumer`` is responsible for receiving the messages from MO_ and writting
+``consumer`` is responsible for receiving the messages from MO_ and writing
 them to postgresql. ``producer`` is responsible for reading the due messages
-from postgresql and writting them to the delayed queue.
+from postgresql and writing them to the delayed queue.
 
 
 Developing
@@ -77,7 +77,7 @@ specified in the LICENSE file.
 This software was developed by Magenta_ ApS.
 
 
-.. _MO: https://mora.readthedocs.io/
-.. _docs: https://mora.readthedocs.io/en/development/amqp.html
+.. _MO: https://os2mo.readthedocs.io/
+.. _docs: https://os2mo.readthedocs.io/en/1.16.1/api/amqp.html
 .. _AMQP: https://www.rabbitmq.com/
 .. _Magenta: https://magenta.dk
