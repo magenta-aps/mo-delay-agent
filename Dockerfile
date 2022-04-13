@@ -17,6 +17,6 @@ COPY pyproject.toml poetry.lock ./
 
 RUN poetry install
 
-COPY mo_delay_agent .
+COPY mo_delay_agent mo_delay_agent
 
-CMD ["poetry", "run", "python", "delay_agent.py"]
+CMD ["poetry", "run", "python", "-m",  "mo_delay_agent.delay_agent"]
