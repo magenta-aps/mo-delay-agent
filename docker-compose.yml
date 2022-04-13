@@ -6,9 +6,6 @@ services:
         env_file:
             - pg.env
             - amqp.env
-        environment:
-            - AMQP_HOST=amqp
-            - POSTGRES_HOST=delay-db
         depends_on:
             - delay-db
             - amqp
