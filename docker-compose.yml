@@ -6,6 +6,9 @@ services:
         env_file:
             - pg.env
             - amqp.env
+        environment:
+            amqp_url: amqp://guest:guest@amqp:5672
+            postgresurl: postgres://delay_agent:delay_agent@delay-db:5432/delay_agent
         depends_on:
             - delay-db
             - amqp

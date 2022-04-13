@@ -9,7 +9,7 @@ from pydantic import PostgresDsn
 
 class Settings(BaseSettings):
 
-    amqp_url: AmqpDsn = parse_obj_as(AmqpDsn, "amqp://guest:guest@amqp:5672")
+    amqp_url: AmqpDsn = parse_obj_as(AmqpDsn, "amqp://guest:guest@localhost:5672")
     amqp_exchange: str = "os2mo"
     amqp_delayed_exchange: str = "os2mo_delayed"
-    postgresurl: PostgresDsn = parse_obj_as(PostgresDsn, "postgres://delay_agent:delay_agent@delay-db:5432/delay_agent")
+    postgresurl: PostgresDsn = parse_obj_as(PostgresDsn, "postgres://delay_agent:delay_agent@localhost:5432/delay_agent")
