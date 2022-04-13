@@ -4,17 +4,16 @@
 # This Source Code Form is subject to the terms of the Mozilla Public
 # License, v. 2.0. If a copy of the MPL was not distributed with this
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
-
 import datetime
-import dateutil.parser
-from functools import partial
 import json
 import logging
 import os
 import random
 import threading
 import time
+from functools import partial
 
+import dateutil.parser
 import pika
 import psycopg2
 
@@ -44,9 +43,7 @@ def get_new_producer_channel():
     """Return a channel for publishing messages to the delayed queue."""
     backoff = new_backoff_gen()
     while True:
-        logging.info(
-            "Trying to make a new producer connection to RabbitMQ on port %s", MQ_PORT
-        )
+        logging.info("Make a new producer connection to RabbitMQ on port %s", MQ_PORT)
         try:
             conn = pika.BlockingConnection(
                 pika.ConnectionParameters(host=MQ_HOST, port=MQ_PORT)
@@ -98,7 +95,7 @@ def producer(get_pg_conn, timeout=2):
                             routing_key=topic,
                             body=message,
                         )
-                    except pika.exceptions.AMQPError as e:
+                    except pika.exceptions.AMQPError:
                         logging.error("Failed to publish", exc_info=True)
                         channel = get_new_producer_channel()
                     else:

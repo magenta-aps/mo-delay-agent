@@ -4,20 +4,16 @@ This file implements a classic unit test for delay_agent.consumer.
 It does not require anything to run. PostgreSQL and RabbitMQ are
 mocked.
 """
-
 # Copyright (C) 2019 Magenta ApS, https://magenta.dk.
 # Contact: info@magenta.dk.
 #
 # This Source Code Form is subject to the terms of the Mozilla Public
 # License, v. 2.0. If a copy of the MPL was not distributed with this
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
-
 import datetime
 import json
 import re
 import uuid
-
-import pika
 
 from mo_delay_agent import delay_agent
 
@@ -95,8 +91,10 @@ def test_valid_message():
     delay_agent.consumer(conn, channel, method, None, json.dumps(message))
     assert channel.basic_ack.kwargs["delivery_tag"] == method.delivery_tag
     sql = conn.cursor.context_manager.execute.args[0]
+
     assert string_equal_ignore_whitespace(
-        sql, "insert into messages (message, topic, produce_at) values (%s, %s, %s);"
+        sql,
+        "insert into messages (message, topic, produce_at) values (%s, %s, %s);",
     )
     assert conn.commit.args is not None
 
