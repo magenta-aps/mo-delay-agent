@@ -3,8 +3,8 @@
 
 stages:
   - lint
-  - build
   - test
+  - build
   - release
 
 
