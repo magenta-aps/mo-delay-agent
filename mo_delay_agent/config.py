@@ -1,3 +1,6 @@
+# SPDX-FileCopyrightText: 2019-2020 Magenta ApS
+#
+# SPDX-License-Identifier: MPL-2.0
 from pydantic import AmqpDsn  # type: ignore # mypy cant find this
 from pydantic import BaseSettings
 from pydantic import parse_obj_as
