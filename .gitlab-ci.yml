@@ -4,6 +4,7 @@
 stages:
   - lint
   - test
+  - coverage
   - build
   - release
 
