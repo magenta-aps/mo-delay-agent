@@ -35,10 +35,3 @@ Pre-commit:
     - poetry install
   script:
     - poetry run pre-commit run --all-files
-
-Unit-test:
-  extends: .pytest
-
-Build:
-  needs: ["Unit-test"]
-  extends: .build-docker
