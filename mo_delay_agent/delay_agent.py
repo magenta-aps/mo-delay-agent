@@ -15,6 +15,7 @@ from functools import partial
 import dateutil.parser
 import pika
 import psycopg2
+
 from mo_delay_agent.config import Settings
 
 
@@ -168,9 +169,14 @@ def get_new_consumer_channel(get_pg_conn, amqp_url, exchange):
                 conn = pika.BlockingConnection(pika.URLParameters(amqp_url))
                 channel = conn.channel()
                 channel.exchange_declare(exchange=exchange, exchange_type="topic")
-                queue_name = channel.queue_declare("delayed", exclusive=True).method.queue
+                queue_name = channel.queue_declare(
+                    "delayed", exclusive=True
+                ).method.queue
                 channel.queue_bind(exchange=exchange, queue=queue_name, routing_key="#")
-                channel.basic_consume(queue=queue_name, on_message_callback=partial(consumer, pgconn), auto_ack=False
+                channel.basic_consume(
+                    queue=queue_name,
+                    on_message_callback=partial(consumer, pgconn),
+                    auto_ack=False,
                 )
             except pika.exceptions.AMQPError:
                 logging.error("Failed to connect to consumer RabbitMQ")
