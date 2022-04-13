@@ -1,6 +1,11 @@
 # SPDX-FileCopyrightText: 2019-2020 Magenta ApS
 # SPDX-License-Identifier: MPL-2.0
 
+variables:
+  IMAGE_SHA: ${CI_REGISTRY_IMAGE}:${CI_COMMIT_SHA}
+  IMAGE_CACHE_REGISTRY: $CI_REGISTRY_IMAGE/cache
+
+
 stages:
   - lint
   - test
