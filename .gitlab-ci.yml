@@ -5,7 +5,7 @@ variables:
   IMAGE_SHA: ${CI_REGISTRY_IMAGE}:${CI_COMMIT_SHA}
   IMAGE_CACHE_REGISTRY: $CI_REGISTRY_IMAGE/cache
   PYTEST_COV_MODULE: mo_delay_agent
-
+  PYTEST_COV_FAIL_UNDER: 30
 stages:
   - lint
   - test
