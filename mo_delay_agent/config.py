@@ -1,4 +1,4 @@
-from pydantic import AmqpDsn
+from pydantic import AmqpDsn  # type: ignore # mypy cant find this
 from pydantic import BaseSettings
 from pydantic import parse_obj_as
 from pydantic import PostgresDsn
