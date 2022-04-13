@@ -20,3 +20,7 @@ repos:
         entry: pflake8
         args: ["--max-line-length=88"]
         additional_dependencies: [pyproject-flake8]
+  - repo: https://github.com/fsfe/reuse-tool
+    rev: v0.12.1
+    hooks:
+      - id: reuse
