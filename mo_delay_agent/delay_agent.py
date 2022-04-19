@@ -124,7 +124,6 @@ def consumer(conn, channel, method, properties, body):
         return
 
     if time > datetime.now(timezone.utc):
-        print("Skriver til DATABASEN!")
         try:
             with conn.cursor() as curs:
                 curs.execute(
