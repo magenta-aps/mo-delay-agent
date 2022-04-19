@@ -70,7 +70,7 @@ def test_invalid_time():
 def test_before_now():
     channel = Mock()
     method = Mock("routing_key", delivery_tag="before_now")
-    message = {"uuid": str(uuid.uuid4()), "time": "2019-02-28 13:41:48.036681"}
+    message = {"uuid": str(uuid.uuid4()), "time": "2019-02-28 13:41:48.036681Z"}
     delay_agent.consumer(None, channel, method, None, json.dumps(message))
     # this test works, because we give None as conn, which means it would
     # crash if it tries to access the database
@@ -83,7 +83,9 @@ def test_valid_message():
     topic = "valid_message"
     method = Mock("routing_key", delivery_tag=topic)
     now = datetime.datetime.utcnow()
-    future = datetime.datetime(now.year + 1, now.month, now.day)
+    future = datetime.datetime(
+        now.year + 1, now.month, now.day, tzinfo=datetime.timezone.utc
+    )
     message = {"uuid": str(uuid.uuid4()), "time": str(future)}
     delay_agent.consumer(conn, channel, method, None, json.dumps(message))
     assert channel.basic_ack.kwargs["delivery_tag"] == method.delivery_tag
