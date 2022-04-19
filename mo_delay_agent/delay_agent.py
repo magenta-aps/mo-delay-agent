@@ -14,11 +14,9 @@ import click
 import dateutil.parser
 import pika
 import psycopg2
+from ramqp.moqp import from_routing_key
 from ramqp.moqp import MOAMQPSystem
-from ramqp.moqp import ObjectType
 from ramqp.moqp import PayloadType
-from ramqp.moqp import RequestType
-from ramqp.moqp import ServiceType
 
 from mo_delay_agent.config import Settings
 
@@ -72,12 +70,12 @@ async def producer(postgres_url, amqp_url, delayed_exchange, timeout=2):
                     timeout_ = 0
 
                     payload = PayloadType(**json.loads(message))
-
+                    service_type, object_type, request_type = from_routing_key(topic)
                     try:
                         await channel.publish_message(
-                            ServiceType.EMPLOYEE,
-                            ObjectType.ADDRESS,
-                            RequestType.EDIT,
+                            service_type,
+                            object_type,
+                            request_type,
                             payload,
                         )
                     except pika.exceptions.AMQPError:
