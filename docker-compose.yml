@@ -3,24 +3,26 @@ version: "3"
 services:
     delay-agent:
         build: .
-        env_file:
-            - pg.env
-            - amqp.env
         environment:
-            amqp_url: amqp://guest:guest@amqp:5672
-            postgresurl: postgres://delay_agent:delay_agent@delay-db:5432/delay_agent
+            amqp_url: amqp://guest:guest@msg_broker:5672
+            postgresurl: postgres://delay_agent:delay_agent@delay-db/delay_agent
+        networks:
+            - os2mo_default          
         depends_on:
             - delay-db
-            - amqp
 
     delay-db:
-        image: "postgres:9.6"
-        env_file:
-            - pg.env
+        image: postgres:11
+        environment:
+            POSTGRES_HOST: localhost
+            POSTGRES_PORT: 5432
+            POSTGRES_DB: delay_agent
+            POSTGRES_USER: delay_agent
+            POSTGRES_PASSWORD: delay_agent
         volumes:
-            - "./delay.sql:/docker-entrypoint-initdb.d/delay.sql"
+            - ./delay.sql:/docker-entrypoint-initdb.d/delay.sql
 
-    amqp:
-        image: rabbitmq:3.5
-        env_file:
-            - amqp.env
+networks:
+    os2mo_default:
+        external: true
+              
