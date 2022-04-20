@@ -39,26 +39,27 @@ async def get_new_producer_channel(amqp_url, delayed_exchange):
     return amqp_system
 
 
+def pg_reconnect(postgres_url):
+    backoff = new_backoff_gen()
+    while True:
+        logging.info("Trying to connect to PostgreSQL")
+        try:
+            conn = psycopg2.connect(postgres_url)
+        except psycopg2.Error:
+            logging.error("Failed to connect to PostgreSQL")
+            time.sleep(next(backoff))
+            continue
+        logging.info("Successfully connected to PostgreSQL")
+        return conn
+
+
 async def producer(postgres_url, amqp_url, delayed_exchange, timeout=2):
     """Push due messages to the delayed queue."""
-
-    def pg_reconnect():
-        backoff = new_backoff_gen()
-        while True:
-            logging.info("Trying to connect to PostgreSQL")
-            try:
-                conn = psycopg2.connect(postgres_url)
-            except psycopg2.Error:
-                logging.error("Failed to connect to PostgreSQL")
-                time.sleep(next(backoff))
-                continue
-            logging.info("Successfully connected to PostgreSQL")
-            return conn
 
     # this can hang indefinitely, but that is fine as the producer is not
     # useful without it anyway.
     channel = await get_new_producer_channel(amqp_url, delayed_exchange)
-    pgconn = pg_reconnect()
+    pgconn = pg_reconnect(postgres_url)
     while True:
         # we user this inner ``timeout_`` because we do not want to timeout in
         # the iteration after a successful call to ``get_due_messages``.

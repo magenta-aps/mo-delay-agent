@@ -13,6 +13,7 @@ psycopg2-binary = "^2.9.3"
 pydantic = "^1.9.0"
 ramqp = "^1.0.0"
 click = "^8.1.2"
+pytest-asyncio = "^0.18.3"
 
 [tool.poetry.dev-dependencies]
 black = "^22.3.0"
