@@ -4,10 +4,11 @@ services:
     delay-agent:
         build: .
         environment:
-            amqp_url: amqp://guest:guest@msg_broker:5672
+            amqp_url: amqp://guest:guest@msg_broker
             postgresurl: postgres://delay_agent:delay_agent@delay-db/delay_agent
         networks:
-            - os2mo_default          
+            - os2mo_default
+            - delay_db
         depends_on:
             - delay-db
 
@@ -21,8 +22,11 @@ services:
             POSTGRES_PASSWORD: delay_agent
         volumes:
             - ./delay.sql:/docker-entrypoint-initdb.d/delay.sql
+        networks:
+            - delay_db
 
 networks:
     os2mo_default:
         external: true
+    delay_db:
               
