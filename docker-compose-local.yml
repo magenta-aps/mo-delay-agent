@@ -9,4 +9,3 @@ services:
             - pg.env
         volumes:
             - "./delay.sql:/docker-entrypoint-initdb.d/delay.sql"
-            
