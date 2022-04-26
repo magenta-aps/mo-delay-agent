@@ -53,6 +53,18 @@ def pg_reconnect(postgres_url):
         return conn
 
 
+async def get_due_messages(pgconn):
+    while True:
+        with pgconn.cursor() as curs:
+            curs.callproc("get_due_messages")
+            for ids, message, topic in curs.fetchall():
+                payload = PayloadType(**json.loads(message))
+                service_type, object_type, request_type = from_routing_key(topic)
+                yield service_type, object_type, request_type, payload
+                curs.execute("delete from messages where id = %s;", (id,))
+        await asyncio.sleep(1)
+
+
 async def producer(postgres_url, amqp_url, delayed_exchange, timeout=2):
     """Push due messages to the delayed queue."""
 
@@ -60,37 +72,14 @@ async def producer(postgres_url, amqp_url, delayed_exchange, timeout=2):
     # useful without it anyway.
     channel = await get_new_producer_channel(amqp_url, delayed_exchange)
     pgconn = pg_reconnect(postgres_url)
-    while True:
-        # we user this inner ``timeout_`` because we do not want to timeout in
-        # the iteration after a successful call to ``get_due_messages``.
-        timeout_ = timeout
-        try:
-            with pgconn.cursor() as curs:
-                curs.callproc("get_due_messages")
-                for id, message, topic in curs.fetchall():
-                    timeout_ = 0
-
-                    payload = PayloadType(**json.loads(message))
-                    service_type, object_type, request_type = from_routing_key(topic)
-                    try:
-                        await channel.publish_message(
-                            service_type,
-                            object_type,
-                            request_type,
-                            payload,
-                        )
-                    except pika.exceptions.AMQPError:
-                        logging.error("Failed to publish", exc_info=True)
-                        channel = get_new_producer_channel(delayed_exchange)
-                    else:
-                        curs.execute("delete from messages where id = %s;", (id,))
-            pgconn.commit()
-        except psycopg2.Error:
-            # rollback? perhaps if "delete from ..." fails?
-            logging.error("PostgreSQL error", exc_info=True)
-            pgconn = pg_reconnect()
-        finally:
-            time.sleep(timeout_)
+    async for message in get_due_messages(pgconn):
+        async with message as (service_type, object_type, request_type, payload):
+            await channel.publish_message(
+                service_type,
+                object_type,
+                request_type,
+                payload,
+            )
 
 
 def consumer(conn, channel, method, properties, body):

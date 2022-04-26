@@ -1,3 +1,4 @@
+#Setup postgres for use in local development where delay-agent is not run from docker.
 version: "3"
 
 services:
@@ -5,7 +6,9 @@ services:
         image: "postgres:9.6"
         ports:
             - 5432:5432
-        env_file:
-            - pg.env
+        environment:
+            POSTGRES_DB: delay_agent
+            POSTGRES_USER: delay_agent
+            POSTGRES_PASSWORD: delay_agent
         volumes:
             - "./delay.sql:/docker-entrypoint-initdb.d/delay.sql"
