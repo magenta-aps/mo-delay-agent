@@ -1,8 +1,21 @@
 version: "3"
 
 services:
-    delay-agent:
+    registrations-to-db:
         build: .
+        command: "poetry run python -m mo_delay_agent.delay_agent registrations-to-db"
+        environment:
+            amqp_url: amqp://guest:guest@msg_broker
+            postgresurl: postgres://delay_agent:delay_agent@delay-db/delay_agent
+        networks:
+            - os2mo_default
+            - delay_db
+        depends_on:
+            - delay-db
+
+    next-events-to-queue:
+        build: .
+        command: "poetry run python -m mo_delay_agent.delay_agent next-events-to-queue"
         environment:
             amqp_url: amqp://guest:guest@msg_broker
             postgresurl: postgres://delay_agent:delay_agent@delay-db/delay_agent

@@ -5,10 +5,10 @@ import datetime
 import json
 import logging
 import random
-import threading
 import time
 from functools import partial
 
+import click
 import dateutil.parser
 import pika
 import psycopg2
@@ -43,7 +43,7 @@ def get_new_producer_channel(amqp_url, delayed_exchange):
             return channel
 
 
-def producer(get_pg_conn, amqp_url, delayed_exchange, timeout=2):
+def producer(postgresurl, amqp_url, delayed_exchange, timeout=2):
     """Push due messages to the delayed queue."""
 
     def pg_reconnect():
@@ -51,7 +51,7 @@ def producer(get_pg_conn, amqp_url, delayed_exchange, timeout=2):
         while True:
             logging.info("Trying to connect to PostgreSQL")
             try:
-                conn = get_pg_conn()
+                conn = psycopg2.connect(postgresurl)
             except psycopg2.Error:
                 logging.error("Failed to connect to PostgreSQL")
                 time.sleep(next(backoff))
@@ -80,9 +80,7 @@ def producer(get_pg_conn, amqp_url, delayed_exchange, timeout=2):
                         )
                     except pika.exceptions.AMQPError:
                         logging.error("Failed to publish", exc_info=True)
-                        channel = get_new_producer_channel(
-                            settings.amqp_delayed_exchange
-                        )
+                        channel = get_new_producer_channel(delayed_exchange)
                     else:
                         curs.execute("delete from messages where id = %s;", (id,))
             pgconn.commit()
@@ -145,13 +143,13 @@ def consumer(conn, channel, method, properties, body):
     channel.basic_ack(delivery_tag=method.delivery_tag)
 
 
-def get_new_consumer_channel(get_pg_conn, amqp_url, exchange):
+def get_new_consumer_channel(postgresurl, amqp_url, exchange):
     """Return a channel for consuming messages from MO's queue."""
     backoff = new_backoff_gen()
     while True:
         logging.info("Trying to connect to PostgreSQL")
         try:
-            pgconn = get_pg_conn()
+            pgconn = psycopg2.connect(postgresurl)
         except psycopg2.Error:
             logging.error("Failed to connect to PostgreSQL")
             time.sleep(next(backoff))
@@ -165,7 +163,9 @@ def get_new_consumer_channel(get_pg_conn, amqp_url, exchange):
             try:
                 conn = pika.BlockingConnection(pika.URLParameters(amqp_url))
                 channel = conn.channel()
-                channel.exchange_declare(exchange=exchange, exchange_type="topic")
+                channel.exchange_declare(
+                    exchange=exchange, exchange_type="topic", durable=True
+                )
                 queue_name = channel.queue_declare(
                     "delayed", exclusive=True
                 ).method.queue
@@ -183,7 +183,8 @@ def get_new_consumer_channel(get_pg_conn, amqp_url, exchange):
                 return channel
 
 
-def main(settings):
+@click.group()
+def cli():
     logging.basicConfig(
         level=logging.DEBUG,
         format="%(asctime)s %(name)-12s %(threadName)-8s %(levelname)-8s %(message)s",
@@ -191,20 +192,20 @@ def main(settings):
     )
     logging.getLogger("pika").setLevel(logging.WARNING)
 
-    def get_pg_conn():
-        return psycopg2.connect(settings.postgresurl)
 
-    threading.current_thread().name = "consumer"
-    t = threading.Thread(
-        target=producer,
-        name="producer",
-        args=(get_pg_conn, settings.amqp_url, settings.amqp_delayed_exchange),
-    )
-    t.daemon = True
-    t.start()
+@cli.command()
+def next_events_to_queue():
+    settings = Settings()
+
+    producer(settings.postgresurl, settings.amqp_url, settings.amqp_delayed_exchange)
+
+
+@cli.command()
+def registrations_to_db():
+    settings = Settings()
 
     channel = get_new_consumer_channel(
-        get_pg_conn, settings.amqp_url, settings.amqp_exchange
+        settings.postgresurl, settings.amqp_url, settings.amqp_exchange
     )
 
     logging.info(" [*] Waiting for messages. To exit press CTRL+C")
@@ -215,12 +216,12 @@ def main(settings):
         except pika.exceptions.AMQPError:
             logging.error("AMQPError while consuming", exc_info=True)
             channel = get_new_consumer_channel(
-                get_pg_conn, settings.amqp_url, settings.amqp_exchange
+                settings.postgresurl, settings.amqp_url, settings.amqp_exchange
             )
         except psycopg2.Error:
             logging.error("psycopg2.Error while consuming", exc_info=True)
             channel = get_new_consumer_channel(
-                get_pg_conn, settings.amqp_url, settings.amqp_exchange
+                settings.postgresurl, settings.amqp_url, settings.amqp_exchange
             )
         except KeyboardInterrupt:
             channel.stop_consuming()
@@ -230,5 +231,4 @@ def main(settings):
 
 
 if __name__ == "__main__":
-    settings = Settings()
-    main(settings)
+    cli()
