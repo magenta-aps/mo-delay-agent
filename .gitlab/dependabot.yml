@@ -8,3 +8,6 @@ updates:
     schedule:
       interval: daily
     rebase-strategy: auto
+    auto-merge:
+      squash: true
+
