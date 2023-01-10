@@ -10,7 +10,7 @@ python-versions = ">=3.5"
 dev = ["cloudpickle", "coverage[toml] (>=5.0.2)", "furo", "hypothesis", "mypy (>=0.900,!=0.940)", "pre-commit", "pympler", "pytest (>=4.3.0)", "pytest-mypy-plugins", "sphinx", "sphinx-notfound-page", "zope.interface"]
 docs = ["furo", "sphinx", "sphinx-notfound-page", "zope.interface"]
 tests = ["cloudpickle", "coverage[toml] (>=5.0.2)", "hypothesis", "mypy (>=0.900,!=0.940)", "pympler", "pytest (>=4.3.0)", "pytest-mypy-plugins", "zope.interface"]
-tests_no_zope = ["cloudpickle", "coverage[toml] (>=5.0.2)", "hypothesis", "mypy (>=0.900,!=0.940)", "pympler", "pytest (>=4.3.0)", "pytest-mypy-plugins"]
+tests-no-zope = ["cloudpickle", "coverage[toml] (>=5.0.2)", "hypothesis", "mypy (>=0.900,!=0.940)", "pympler", "pytest (>=4.3.0)", "pytest-mypy-plugins"]
 
 [[package]]
 name = "black"
@@ -372,7 +372,7 @@ python-versions = ">=3.7"
 
 [[package]]
 name = "types-python-dateutil"
-version = "2.8.19.3"
+version = "2.8.19.5"
 description = "Typing stubs for python-dateutil"
 category = "dev"
 optional = false
@@ -406,7 +406,7 @@ testing = ["coverage (>=6.2)", "coverage-enable-subprocess (>=1)", "flaky (>=3.7
 [metadata]
 lock-version = "1.1"
 python-versions = "^3.9"
-content-hash = "9eff74244354b7b183ca4cc07681a3413a78334350903be06f5cd45b2bf1e41f"
+content-hash = "d56a55e737302249a1c43b5f99fcec9c8dfff37d20ab993c789aaa922aea65b1"
 
 [metadata.files]
 attrs = [
@@ -767,8 +767,8 @@ tomli = [
     {file = "tomli-2.0.1.tar.gz", hash = "sha256:de526c12914f0c550d15924c62d72abc48d6fe7364aa87328337a31007fe8a4f"},
 ]
 types-python-dateutil = [
-    {file = "types-python-dateutil-2.8.19.3.tar.gz", hash = "sha256:a313284df5ed3fd078303262edc0efde28998cd08e5061ef1ccc0bb5fef4d2da"},
-    {file = "types_python_dateutil-2.8.19.3-py3-none-any.whl", hash = "sha256:ce6af1bdf0aca6b7dc8815a664f0e8b55da91ff7851102cf87c87178e7c8e7ec"},
+    {file = "types-python-dateutil-2.8.19.5.tar.gz", hash = "sha256:ab91fc5f715f7d76d9a50d3dd74d0c68dfe38a54f0239cfa0506575ae4d87a9d"},
+    {file = "types_python_dateutil-2.8.19.5-py3-none-any.whl", hash = "sha256:253c267e71cac148003db200cb3fc572ab0e2f994b34a4c1de5d3f550f0ad5b2"},
 ]
 typing-extensions = [
     {file = "typing_extensions-4.4.0-py3-none-any.whl", hash = "sha256:16fa4864408f655d35ec496218b85f79b3437c829e93320c7c9215ccfd92489e"},
